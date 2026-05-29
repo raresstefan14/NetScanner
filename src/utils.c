@@ -33,7 +33,7 @@ void print_banner() {
     printf("  ██║╚██╗██║██╔══╝     ██║   ╚════██║██║     ██╔══██║██║╚██╗██║██║╚██╗██║██╔══╝  ██╔══██╗\n");
     printf("  ██║ ╚████║███████╗   ██║   ███████║╚██████╗██║  ██║██║ ╚████║██║ ╚████║███████╗██║  ██║\n");
     printf("  ╚═╝  ╚═══╝╚══════╝   ╚═╝   ╚══════╝ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝\n");
-    printf("                              Port Scanner v1.0\n\n");
+    printf("                              NetScanner v1.0\n\n");
 }
 
 void print_result(PortResult *results, int count, const char *host) {
