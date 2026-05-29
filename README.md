@@ -119,22 +119,14 @@ PORT   SERVICE   TIME(ms)   BANNER
 
 ## Screenshots
 
-Place the screenshot files in the `assets/` folder with the following filenames:
+A dedicated `assets/` folder is already prepared for your screenshot files.
+
+Use these exact filenames:
 
 - `assets/netscanner-tcp.png`
 - `assets/netscanner-udp.png`
 
-### TCP scan interface
-
-![NetScanner TCP scan interface](assets/netscanner-tcp.png)
-
-A typical TCP scan view shows the target, port range, timeout, scan status, and open port results.
-
-### UDP scan interface
-
-![NetScanner UDP scan interface](assets/netscanner-udp.png)
-
-The UDP interface displays the same clean layout with UDP port results and service detection.
+The repository includes a placeholder file at `assets/.gitkeep` so the folder appears in Git. When you add the real images and push them, GitHub will render the screenshots in the README.
 
 ## How It Works
 
