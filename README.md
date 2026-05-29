@@ -1,81 +1,167 @@
 # NetScanner
 
-A fast, multi-threaded TCP port scanner written in C.
+NetScanner is a lightweight TCP port scanner written in C. It combines fast, multi-threaded scanning with basic service detection and banner grabbing to help you discover open services on target hosts.
 
-Built from scratch using POSIX sockets and pthreads — no external libraries.
+Built with POSIX sockets and pthreads, the scanner has no external runtime dependencies beyond a standard C toolchain.
 
-## Features
+## What NetScanner Does
 
-- Multi-threaded scanning (100 ports in parallel)
-- Service detection (SSH, HTTP, FTP, DNS, and more)
-- Banner grabbing (reads server response on open ports)
-- Configurable port range and timeout
-- Fast: scans 1000 ports in ~2 seconds
+- Scans TCP ports in parallel using threads
+- Detects common services such as SSH, HTTP, FTP, and DNS
+- Captures simple service banners when available
+- Lets you configure the port range and timeout per scan
+- Reports open ports with the associated response time
+
+## Requirements
+
+- Linux or other POSIX-compatible system
+- GCC or another C compiler
+- `make`
 
 ## Build
+
+To compile the scanner from source, run:
 
 ```bash
 make
 ```
 
+This produces the executable `netscanner` in the repository root.
+
 ## Usage
 
 ```bash
-./netscanner -h  -p  -t 
+./netscanner -h <host> -p <port-range> -t <timeout-ms>
 ```
+
+Required options:
+
+- `-h <host>` : target hostname or IP address
+- `-p <port-range>` : port range to scan, for example `1-1000` or `80-80`
+- `-t <timeout-ms>` : connection timeout in milliseconds
+
+## Command-Line Interface
+
+NetScanner is controlled entirely via the command line. The simple interface is designed for fast scans and easy automation.
+
+### Basic syntax
+
+```bash
+./netscanner -h example.com -p 1-1024 -t 1500
+```
+
+### What the interface displays
+
+- target host and resolved IP
+- scanned port range
+- timeout value
+- per-port scan result with service detection
+- banner text for open services when available
+
+### Tips for using the interface
+
+- Use a narrow port range for quick checks: `-p 20-1024`
+- Use a longer timeout for slower networks: `-t 2000`
+- Use `80-80`, `22-22`, or `443-443` to scan a single port
 
 ## Examples
 
+### Scan a full port range on a public test host
+
 ```bash
-# Scan ports 1-1000 on a remote host
 ./netscanner -h scanme.nmap.org -p 1-1000 -t 1000
+```
 
-# Scan localhost with fast timeout
+### Scan localhost with a fast timeout
+
+```bash
 ./netscanner -h 127.0.0.1 -p 1-500 -t 500
+```
 
-# Scan a single port
+### Scan a single port for a specific service
+
+```bash
 ./netscanner -h scanme.nmap.org -p 80-80 -t 2000
+```
+
+### Scan a restricted service range
+
+```bash
+./netscanner -h 192.168.1.1 -p 20-25 -t 1200
+```
+
+### Scan two well-known ports at once
+
+```bash
+./netscanner -h example.com -p 22-22 -t 1000
+./netscanner -h example.com -p 443-443 -t 1000
 ```
 
 ## Example Output
 
+A successful scan prints the target information, the scanned port range, and details for each open port. The interface uses clear labels and a compact table layout.
+
 ```text
-  ███╗   ██╗███████╗████████╗███████╗ ██████╗ █████╗ ███╗   ██╗███╗   ██╗███████╗██████╗
-  ████╗  ██║██╔════╝╚══██╔══╝██╔════╝██╔════╝██╔══██╗████╗  ██║████╗  ██║██╔════╝██╔══██╗
-  ██╔██╗ ██║█████╗     ██║   ███████╗██║     ███████║██╔██╗ ██║██╔██╗ ██║█████╗  ██████╔╝
-  ██║╚██╗██║██╔══╝     ██║   ╚════██║██║     ██╔══██║██║╚██╗██║██║╚██╗██║██╔══╝  ██╔══██╗
-  ██║ ╚████║███████╗   ██║   ███████║╚██████╗██║  ██║██║ ╚████║██║ ╚████║███████╗██║  ██║
-  ╚═╝  ╚═══╝╚══════╝   ╚═╝   ╚══════╝ ╚═════╝╚═╝  ██╔══╝╚═╝  ╚══════╝╚═╝  ╚══════╝╚═╝  ╚═╝
-                              NetScanner v1.0
+[*] Target: scanme.nmap.org (45.33.32.156)
+[*] Port range: 1 - 1000
+[*] Timeout: 1000 ms
 
-  [*] Target:  scanme.nmap.org (45.33.32.156)
-  [*] Porturi: 1 - 1000
-  [*] Timeout: 1000 ms
+Scanning...
 
-  Scanare in curs...
+[+] Port 22     SSH          194.4 ms
+[+] Port 80     HTTP         190.7 ms
 
-  [+] Port 22     SSH          194.4 ms
-  [+] Port 80     HTTP         190.7 ms
-  PORT     SERVICIU       TIMP       BANNER
-  ──────────────────────────────────────────────────────
-  22       SSH            194.4      SSH-2.0-OpenSSH_8.2p1 Ubuntu-4ubuntu0.6
-  80       HTTP           191.0      HTTP/1.1 200 OK
+PORT   SERVICE   TIME(ms)   BANNER
+---------------------------------------------
+22     SSH       194.4      SSH-2.0-OpenSSH_8.2p1 Ubuntu-4ubuntu0.6
+80     HTTP      191.0      HTTP/1.1 200 OK
 ```
 
-## How it works
+## Screenshots
 
-NetScanner uses non-blocking TCP connect scanning — the same technique as `nmap -sT`.
+Place the screenshot files in the `assets/` folder with the following filenames:
 
-For each port it:
-1. Opens a non-blocking socket
-2. Attempts a TCP connection
-3. Uses `select()` to wait for the result within the timeout
-4. Confirms with `send()` to eliminate false positives
-5. If open, attempts to read a banner from the service
+- `assets/netscanner-tcp.png`
+- `assets/netscanner-udp.png`
 
-Ports are scanned in batches of 100 threads simultaneously.
+### TCP scan interface
 
-## Legal
+![NetScanner TCP scan interface](assets/netscanner-tcp.png)
 
-Only scan hosts you own or have explicit permission to scan.
-`scanme.nmap.org` is provided by the Nmap project for testing purposes.
+A typical TCP scan view shows the target, port range, timeout, scan status, and open port results.
+
+### UDP scan interface
+
+![NetScanner UDP scan interface](assets/netscanner-udp.png)
+
+The UDP interface displays the same clean layout with UDP port results and service detection.
+
+## How It Works
+
+NetScanner performs TCP connect scans in parallel using POSIX sockets and `select()` for timeouts. For each port in the requested range, the scanner:
+
+1. Creates a non-blocking socket
+2. Initiates a TCP connection attempt
+3. Waits for the connection result up to the configured timeout
+4. Confirms the open port with a lightweight send/receive sequence
+5. Reads a service banner when available
+
+The scanner uses a thread pool so many connection attempts can run simultaneously without blocking the entire application.
+
+## Project Structure
+
+- `src/` : application source files
+- `include/` : public headers for scanner functionality
+- `Makefile` : build instructions
+
+## Notes
+
+- The current implementation is focused on TCP scanning only.
+- Use a reasonable timeout value to balance scan speed and accuracy.
+- Banner grabbing may not work on every service.
+
+## Legal and Responsible Use
+
+Only scan hosts that you own or have explicit permission to test. Unauthorized scanning may violate local laws and network policies.
+
+`scanme.nmap.org` is a safe public target provided by the Nmap project for testing port scanners.
