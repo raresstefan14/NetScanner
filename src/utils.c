@@ -8,7 +8,6 @@ int resolve_host(const char *hostname, char *ip_out) {
     struct hostent *he;
     struct in_addr **addr_list;
 
-    // daca e deja IP, il returnam direct
     if (inet_addr(hostname) != INADDR_NONE) {
         strcpy(ip_out, hostname);
         return 1;
@@ -16,7 +15,7 @@ int resolve_host(const char *hostname, char *ip_out) {
 
     he = gethostbyname(hostname);
     if (he == NULL) {
-        fprintf(stderr, "[-] Nu pot rezolva host-ul: %s\n", hostname);
+        fprintf(stderr, "[-] Cannot resolve host: %s\n", hostname);
         return 0;
     }
 
@@ -36,16 +35,34 @@ void print_banner() {
     printf("                              NetScanner v1.0\n\n");
 }
 
+void print_progress(int current, int total) {
+    int bar_width = 40;
+    float percent = (float)current / total;
+    int filled = (int)(percent * bar_width);
+
+    printf("  [");
+    for (int i = 0; i < bar_width; i++) {
+        if (i < filled)
+            printf("#");
+        else
+            printf(".");
+    }
+    printf("] %d/%d (%.0f%%)\n", current, total, percent * 100);
+    fflush(stdout);
+}
+
 void print_result(PortResult *results, int count, const char *host) {
     printf("\n  ┌─────────────────────────────────────────┐\n");
     printf("  │  Host: %-32s │\n", host);
-    printf("  │  Porturi deschise: %-21d │\n", count);
+    printf("  │  Open ports: %-27d │\n", count);
     printf("  └─────────────────────────────────────────┘\n\n");
 
     if (count == 0) {
-        printf("  [-] Niciun port deschis gasit.\n");
+        printf("  [-] No open ports found.\n");
+        return;
     }
-    printf("  %-8s %-15s %-10s %s\n", "PORT", "SERVICIU", "TIMP", "BANNER");
+
+    printf("  %-8s %-15s %-10s %s\n", "PORT", "SERVICE", "TIME", "BANNER");
     printf("  ──────────────────────────────────────────────────────\n");
     for (int i = 0; i < count; i++) {
         printf("  %-8d %-15s %-10.1f %s\n",
@@ -55,4 +72,4 @@ void print_result(PortResult *results, int count, const char *host) {
                results[i].banner[0] ? results[i].banner : "");
     }
     printf("\n");
-    }
+}

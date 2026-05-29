@@ -1,6 +1,6 @@
 CC      = gcc
 CFLAGS  = -Wall -Wextra -O2 -Iinclude
-SRC     = src/main.c src/scanner.c src/utils.c src/threadpool.c
+SRC     = src/main.c src/scanner.c src/utils.c src/threadpool.c src/cidr.c src/udp_scanner.c
 TARGET  = netscanner
 
 all: $(TARGET)
