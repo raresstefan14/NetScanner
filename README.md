@@ -126,6 +126,24 @@ PORT   SERVICE   TIME(ms)   BANNER
 80     HTTP      191.0      HTTP/1.1 200 OK
 ```
 
+<<<<<<< HEAD
+=======
+## Screenshots
+
+These are the real NetScanner screenshots now included in the repository.
+
+### TCP scan interface
+
+![NetScanner TCP scan interface](assets/netscanner-tcp.png)
+
+This screenshot shows the TCP scan mode with target details, timeout, open ports, and service banners.
+
+### UDP scan interface
+
+![NetScanner UDP scan interface](assets/netscanner-udp.png)
+
+This screenshot shows the UDP scan mode with the same clean interface and detected results.
+>>>>>>> 8a2fffd (Add real screenshot assets and update README image links)
 
 ## How It Works
 
