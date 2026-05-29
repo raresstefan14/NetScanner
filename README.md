@@ -122,16 +122,6 @@ PORT   SERVICE   TIME(ms)   BANNER
 80     HTTP      191.0      HTTP/1.1 200 OK
 ```
 
-## Screenshots
-
-A dedicated `assets/` folder is already prepared for your screenshot files.
-
-Use these exact filenames:
-
-- `assets/netscanner-tcp.png`
-- `assets/netscanner-udp.png`
-
-The repository includes a placeholder file at `assets/.gitkeep` so the folder appears in Git. When you add the real images and push them, GitHub will render the screenshots in the README.
 
 ## How It Works
 
