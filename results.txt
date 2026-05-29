@@ -1,0 +1,9 @@
+NetScanner Results
+Host: scanme.nmap.org (45.33.32.156)
+Ports: 1-100
+Open ports: 2
+
+PORT     SERVICE         TIME(ms)   BANNER
+------------------------------------------------
+22       SSH             187.5      
+80       HTTP            196.7      HTTP/1.1 200 OK
