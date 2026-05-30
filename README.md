@@ -4,6 +4,11 @@ NetScanner is a lightweight TCP port scanner written in C. It combines fast, mul
 
 Built with POSIX sockets and pthreads, the scanner has no external runtime dependencies beyond a standard C toolchain.
 
+## Demo
+
+
+[![NetScanner Demo](https://asciinema.org/a/zR9RWyTLYwICBFZ0.svg)](https://asciinema.org/a/zR9RWyTLYwICBFZ0)
+
 ## What NetScanner Does
 
 - Scans TCP ports in parallel using a thread pool (100 concurrent threads)
