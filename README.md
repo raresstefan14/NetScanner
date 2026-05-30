@@ -6,12 +6,15 @@ Built with POSIX sockets and pthreads, the scanner has no external runtime depen
 
 ## What NetScanner Does
 
-- Scans TCP ports in parallel using threads
-- Detects common services such as SSH, HTTP, FTP, and DNS
-- Captures simple service banners when available
-- Lets you configure the port range and timeout per scan
-- Reports open ports with the associated response time
-
+- Scans TCP ports in parallel using a thread pool (100 concurrent threads)
+- Scans UDP ports with service-specific probes (DNS, SNMP)
+- Supports CIDR notation to scan entire subnets (ex: `192.168.1.0/24`)
+- Detects common services such as SSH, HTTP, FTP, DNS, and more
+- Captures service banners on open ports
+- **OS Detection** — fingerprints the target OS using TTL analysis and banner matching
+- Saves results to a file with `-o`
+- Configurable port range, timeout, and scan mode
+- 
 ## Requirements
 
 - Linux or other POSIX-compatible system
@@ -97,12 +100,12 @@ NetScanner is controlled entirely via the command line. The simple interface is 
 ./netscanner -h example.com -p 443-443 -t 1000
 ```
 
-## Example Output
 
 ## Example Output
+
 
 ### TCP Scan — scanme.nmap.org
-## Example Output
+
 
 ![TCP Scan](assets/image.png)
 
@@ -157,6 +160,14 @@ NetScanner performs TCP connect scans in parallel using POSIX sockets and `selec
 
 The scanner uses a thread pool so many connection attempts can run simultaneously without blocking the entire application.
 
+### OS Detection
+
+After the scan completes, NetScanner attempts to identify the target operating system using two signals:
+
+- **TTL analysis** — pings the target and reads the TTL value from the response. Linux/Unix systems typically return TTL ≤ 64, Windows ≤ 128, and routers/network devices > 128.
+- **Banner matching** — checks open port banners for known signatures: Dropbear SSH (embedded Linux), OpenSSH with Ubuntu/Debian tags, IIS (Windows Server), nginx, and others.
+
+Each matched signal adds to a confidence score. The final result shows the detected OS name, family, and confidence percentage.
 ## Project Structure
 
 - `src/` : application source files
