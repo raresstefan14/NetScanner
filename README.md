@@ -102,9 +102,13 @@ NetScanner is controlled entirely via the command line. The simple interface is 
 ## Example Output
 
 ### TCP Scan — scanme.nmap.org
-![TCP Scan](assets/Screenshot%202026-05-30%20005102.png)
+## Example Output
+
+![TCP Scan](assets/image.png)
+
 
 ### UDP Scan — router local  
+
 ![UDP Scan](assets/Screenshot%202026-05-30%20005128.png)
 ```text
 [*] Target: scanme.nmap.org (45.33.32.156)
