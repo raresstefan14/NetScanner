@@ -7,7 +7,7 @@ Built with POSIX sockets and pthreads, the scanner has no external runtime depen
 ## Demo
 
 
-[![NetScanner Demo](https://asciinema.org/a/zR9RWyTLYwICBFZ0.svg)](https://asciinema.org/a/zR9RWyTLYwICBFZ0)
+[![NetScanner Demo](assets/nn.mp4)
 
 ## What NetScanner Does
 
