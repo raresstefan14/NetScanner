@@ -137,6 +137,7 @@ void *thread_scan(void *arg) {
     gettimeofday(&t2, NULL);
     double elapsed = (t2.tv_sec - t1.tv_sec) * 1000.0 +
                      (t2.tv_usec - t1.tv_usec) / 1000.0;
+    if (elapsed < 0) elapsed = 0;
     
     t->result->port = t->port;
     t->result->open = is_open;

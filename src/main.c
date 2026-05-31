@@ -5,6 +5,7 @@
 #include "../include/utils.h"
 #include "../include/cidr.h"
 #include "../include/udp_scanner.h"
+#include "../include/os_detect.h"
 
 void usage(const char *prog) {
     printf("Usage: %s -h <host/CIDR> [-p <start-end>] [-t <timeout_ms>] [-o <file>] [-u]\n", prog);
@@ -109,6 +110,12 @@ int main(int argc, char *argv[]) {
             ? scan_udp_range(ip, &config, &open_count)
             : scan_range(ip, &config, &open_count);
 
+        const char *best_banner = "";
+        for (int j = 0; j < open_count; j++) {
+            if (results[j].banner[0]) { best_banner = results[j].banner; break; }
+        }
+        OsResult os = detect_os(config.host, best_banner);
+        print_os_result(&os);
         print_result(results, open_count, config.host);
 
         if (strlen(config.output_file) > 0) {
