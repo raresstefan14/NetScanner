@@ -8,6 +8,7 @@ typedef struct Task {
     const char *ip;
     int port;
     int timeout_ms;
+    int udp;
     PortResult *result;
     struct Task *next;
 } Task;
@@ -29,7 +30,7 @@ typedef struct {
 } ThreadPool;
 
 ThreadPool* threadpool_create(int thread_count);
-void threadpool_add(ThreadPool *pool, const char *ip, int port, int timeout_ms, PortResult *result);
+void threadpool_add(ThreadPool *pool, const char *ip, int port, int timeout_ms, int udp, PortResult *result);
 void threadpool_wait(ThreadPool *pool);
 void threadpool_destroy(ThreadPool *pool);
 

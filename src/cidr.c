@@ -4,23 +4,21 @@
 #include <arpa/inet.h>
 #include "../include/cidr.h"
 
-int cidr_to_ips(const char *cidr, char **ips_out, int *count_out) {
-    char cidr_copy[64];
+int cidr_to_ips(const char *cidr, char ***ips_out, int *count_out) {
+    char cidr_copy[64] = {0};
     strncpy(cidr_copy, cidr, sizeof(cidr_copy) - 1);
 
     char *slash = strchr(cidr_copy, '/');
     if (!slash) {
-        *ips_out = malloc(64);
-        strncpy(*ips_out, cidr, 63);
-        *count_out = 1;
-        return 1;
+        fprintf(stderr, "[-] Not a CIDR range: %s\n", cidr);
+        return 0;
     }
 
     *slash = '\0';
-    int prefix = atoi(slash + 1);
-
-    if (prefix < 0 || prefix > 32) {
-        fprintf(stderr, "[-] Invalid prefix: /%d\n", prefix);
+    char *end;
+    long prefix = strtol(slash + 1, &end, 10);
+    if (*end != '\0' || end == slash + 1 || prefix < 16 || prefix > 32) {
+        fprintf(stderr, "[-] Invalid prefix: /%s (allowed /16 to /32)\n", slash + 1);
         return 0;
     }
 
@@ -30,25 +28,20 @@ int cidr_to_ips(const char *cidr, char **ips_out, int *count_out) {
         return 0;
     }
 
-    uint32_t base = ntohl(base_addr.s_addr);
-    uint32_t mask = prefix == 0 ? 0 : (~0u << (32 - prefix));
-    uint32_t network = base & mask;
-    uint32_t count = 1u << (32 - prefix);
-
-    if (count > 65536) {
-        fprintf(stderr, "[-] Range too large (max /16)\n");
-        return 0;
-    }
+    uint32_t mask = prefix == 32 ? ~0u : ~(~0u >> prefix);
+    uint32_t network = ntohl(base_addr.s_addr) & mask;
+    uint32_t first = network, count = 1u << (32 - prefix);
+    // /31 and /32 have no network/broadcast address; everything else skips both.
+    if (prefix < 31) { first++; count -= 2; }
 
     char **ips = malloc(sizeof(char *) * count);
     for (uint32_t i = 0; i < count; i++) {
-        ips[i] = malloc(16);
-        struct in_addr addr;
-        addr.s_addr = htonl(network + i);
-        inet_ntop(AF_INET, &addr, ips[i], 16);
+        ips[i] = malloc(INET_ADDRSTRLEN);
+        struct in_addr addr = { htonl(first + i) };
+        inet_ntop(AF_INET, &addr, ips[i], INET_ADDRSTRLEN);
     }
 
-    *ips_out = (char *)ips;
+    *ips_out = ips;
     *count_out = (int)count;
     return 1;
 }

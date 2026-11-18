@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <string.h>
 #include "../include/threadpool.h"
+#include "../include/udp_scanner.h"
 
 static void *worker(void *arg) {
     ThreadPool *pool = (ThreadPool *)arg;
@@ -28,12 +29,10 @@ static void *worker(void *arg) {
 
         pthread_mutex_unlock(&pool->lock);
 
-        // executam task-ul
-        scan_port(task->ip, task->port, task->timeout_ms);
-        
         struct timeval t1, t2;
         gettimeofday(&t1, NULL);
-        int is_open = scan_port(task->ip, task->port, task->timeout_ms);
+        int is_open = task->udp ? scan_udp_port(task->ip, task->port, task->timeout_ms)
+                                : scan_port(task->ip, task->port, task->timeout_ms);
         gettimeofday(&t2, NULL);
 
         double elapsed = (t2.tv_sec - t1.tv_sec) * 1000.0 +
@@ -46,10 +45,11 @@ static void *worker(void *arg) {
         task->result->banner[0] = '\0';
 
         if (is_open) {
-            grab_banner(task->ip, task->port, task->timeout_ms,
-                        task->result->banner, sizeof(task->result->banner));
-            printf("  [+] Port %-6d %-12s %.1f ms\n",
-                   task->port, task->result->service, elapsed);
+            if (!task->udp)
+                grab_banner(task->ip, task->port, task->timeout_ms,
+                            task->result->banner, sizeof(task->result->banner));
+            printf("  [+] %-15s %s %-6d %-12s %.1f ms\n", task->ip,
+                   task->udp ? "UDP" : "TCP", task->port, task->result->service, elapsed);
             fflush(stdout);
         }
 
@@ -85,11 +85,12 @@ ThreadPool* threadpool_create(int thread_count) {
     return pool;
 }
 
-void threadpool_add(ThreadPool *pool, const char *ip, int port, int timeout_ms, PortResult *result) {
+void threadpool_add(ThreadPool *pool, const char *ip, int port, int timeout_ms, int udp, PortResult *result) {
     Task *task = malloc(sizeof(Task));
     task->ip = ip;
     task->port = port;
     task->timeout_ms = timeout_ms;
+    task->udp = udp;
     task->result = result;
     task->next = NULL;
 

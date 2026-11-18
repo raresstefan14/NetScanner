@@ -10,3 +10,8 @@ $(TARGET): $(SRC)
 
 clean:
 	rm -f $(TARGET)
+
+test: $(TARGET)
+	./tests/smoke.sh
+
+.PHONY: all clean test

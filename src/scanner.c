@@ -8,7 +8,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include "../include/scanner.h"
-#include <pthread.h>
+#include "../include/threadpool.h"
 #define MAX_THREADS 100
 
 // Returneaza numele serviciului pentru porturile comune
@@ -126,70 +126,26 @@ void grab_banner(const char *ip, int port, int timeout_ms, char *banner_out, int
 
     close(sockfd);
 }
-void *thread_scan(void *arg) {
-    ThreadArg *t = (ThreadArg *)arg;
-    
-    struct timeval t1, t2;
-    gettimeofday(&t1, NULL);
-    
-    int is_open = scan_port(t->ip, t->port, t->timeout_ms);
-    
-    gettimeofday(&t2, NULL);
-    double elapsed = (t2.tv_sec - t1.tv_sec) * 1000.0 +
-                     (t2.tv_usec - t1.tv_usec) / 1000.0;
-    if (elapsed < 0) elapsed = 0;
-    
-    t->result->port = t->port;
-    t->result->open = is_open;
-    t->result->response_time_ms = elapsed;
-    strncpy(t->result->service, get_service_name(t->port), 31);
-    t->result->banner[0] = '\0';
-    
-    if (is_open) {
-        grab_banner(t->ip, t->port, t->timeout_ms, 
-                    t->result->banner, sizeof(t->result->banner));
+// Scans every port of n hosts through one shared pool, so a slow port never blocks the others.
+// Returns one array of open ports per host; open_counts[h] is its length.
+PortResult **scan_hosts(char **ips, int n, ScanConfig *config, int udp, int *open_counts) {
+    int ports = config->port_end - config->port_start + 1;
+    PortResult **res = malloc(sizeof(PortResult *) * n);
+    ThreadPool *pool = threadpool_create(MAX_THREADS);
+
+    for (int h = 0; h < n; h++) {
+        res[h] = calloc(ports, sizeof(PortResult));
+        for (int p = 0; p < ports; p++)
+            threadpool_add(pool, ips[h], config->port_start + p, config->timeout_ms, udp, &res[h][p]);
     }
-    
-    return NULL;
-}
-// Scaneaza un range de porturi si returneaza rezultatele
-   PortResult* scan_range(const char *ip, ScanConfig *config, int *open_count) {
-    int total = config->port_end - config->port_start + 1;
-    PortResult *all_results = malloc(sizeof(PortResult) * total);
-    PortResult *open_results = malloc(sizeof(PortResult) * total);
-    *open_count = 0;
+    threadpool_wait(pool);
+    threadpool_destroy(pool);
 
-    pthread_t threads[MAX_THREADS];
-    ThreadArg args[MAX_THREADS];
-
-    int i = 0;
-    while (i < total) {
-        int batch = (total - i < MAX_THREADS) ? total - i : MAX_THREADS;
-
-        for (int j = 0; j < batch; j++) {
-            args[j].ip         = ip;
-            args[j].port       = config->port_start + i + j;
-            args[j].timeout_ms = config->timeout_ms;
-            args[j].result     = &all_results[i + j];
-            pthread_create(&threads[j], NULL, thread_scan, &args[j]);
-        }
-
-        for (int j = 0; j < batch; j++) {
-            pthread_join(threads[j], NULL);
-            if (all_results[i + j].open) {
-                open_results[*open_count] = all_results[i + j];
-                printf("  [+] Port %-6d %-12s %.1f ms\n",
-                       open_results[*open_count].port,
-                       open_results[*open_count].service,
-                       open_results[*open_count].response_time_ms);
-                fflush(stdout);
-                (*open_count)++;
-            }
-        }
-
-        i += batch;
+    for (int h = 0; h < n; h++) {
+        int k = 0;
+        for (int p = 0; p < ports; p++)
+            if (res[h][p].open) res[h][k++] = res[h][p];
+        open_counts[h] = k;
     }
-
-    free(all_results);
-    return open_results;
+    return res;
 }

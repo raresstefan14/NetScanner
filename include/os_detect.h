@@ -3,6 +3,7 @@
 
 #define OS_UNKNOWN      "Unknown"
 #define OS_LINUX        "Linux"
+#define OS_UNIX         "Linux / macOS / BSD"
 #define OS_WINDOWS      "Windows"
 #define OS_MACOS        "macOS / iOS"
 #define OS_FREEBSD      "FreeBSD"

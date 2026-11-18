@@ -22,15 +22,8 @@ typedef struct {
     double response_time_ms;
 } PortResult;
 
-typedef struct {
-    const char *ip;
-    int port;
-    int timeout_ms;
-    PortResult *result;
-} ThreadArg;
-
 int scan_port(const char *ip, int port, int timeout_ms);
-PortResult* scan_range(const char *ip, ScanConfig *config, int *open_count);
+PortResult **scan_hosts(char **ips, int n, ScanConfig *config, int udp, int *open_counts);
 const char* get_service_name(int port);
 void grab_banner(const char *ip, int port, int timeout_ms, char *banner_out, int banner_len);
 

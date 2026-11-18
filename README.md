@@ -7,19 +7,18 @@ Built with POSIX sockets and pthreads, the scanner has no external runtime depen
 ## Demo
 
 
-[![NetScanner Demo](assets/oo.gif)
+![NetScanner Demo](assets/oo.gif)
 
 ## What NetScanner Does
 
-- Scans TCP ports in parallel using a thread pool (100 concurrent threads)
+- Scans TCP ports in parallel using a thread pool (100 concurrent workers; a slow port never blocks the rest)
 - Scans UDP ports with service-specific probes (DNS, SNMP)
 - Supports CIDR notation to scan entire subnets (ex: `192.168.1.0/24`)
 - Detects common services such as SSH, HTTP, FTP, DNS, and more
 - Captures service banners on open ports
-- **OS Detection** — fingerprints the target OS using TTL analysis and banner matching
+- **OS Detection** — fingerprints the target OS using TTL analysis (needs `sudo`) and banner matching
 - Saves results to a file with `-o`
 - Configurable port range, timeout, and scan mode
-- 
 ## Requirements
 
 - Linux or other POSIX-compatible system
@@ -36,6 +35,12 @@ make
 
 This produces the executable `netscanner` in the repository root.
 
+Run the smoke tests (needs `python3`):
+
+```bash
+make test
+```
+
 ## Usage
 
 ```bash
@@ -45,7 +50,7 @@ This produces the executable `netscanner` in the repository root.
 Required options:
 
 - `-h <host>` : target hostname or IP address
-- `-p <port-range>` : port range to scan, for example `1-1000` or `80-80`
+- `-p <port-range>` : port range to scan, for example `1-1000`, or a single port like `80`
 - `-t <timeout-ms>` : connection timeout in milliseconds
 
 ## Command-Line Interface
@@ -70,7 +75,7 @@ NetScanner is controlled entirely via the command line. The simple interface is 
 
 - Use a narrow port range for quick checks: `-p 20-1024`
 - Use a longer timeout for slower networks: `-t 2000`
-- Use `80-80`, `22-22`, or `443-443` to scan a single port
+- Pass a single number to scan one port: `-p 80`
 
 ## Examples
 
@@ -89,7 +94,7 @@ NetScanner is controlled entirely via the command line. The simple interface is 
 ### Scan a single port for a specific service
 
 ```bash
-./netscanner -h scanme.nmap.org -p 80-80 -t 2000
+./netscanner -h scanme.nmap.org -p 80 -t 2000
 ```
 
 ### Scan a restricted service range
@@ -98,11 +103,18 @@ NetScanner is controlled entirely via the command line. The simple interface is 
 ./netscanner -h 192.168.1.1 -p 20-25 -t 1200
 ```
 
-### Scan two well-known ports at once
+### Scan a subnet
 
 ```bash
-./netscanner -h example.com -p 22-22 -t 1000
-./netscanner -h example.com -p 443-443 -t 1000
+./netscanner -h 192.168.1.0/24 -p 22-443 -t 500 -o lan.txt
+```
+
+Only hosts with open ports are shown. Subnets from `/16` to `/32` are supported.
+
+### Get OS detection from TTL (needs raw sockets)
+
+```bash
+sudo ./netscanner -h 192.168.1.1
 ```
 
 
@@ -117,7 +129,7 @@ NetScanner is controlled entirely via the command line. The simple interface is 
 
 ### UDP Scan — router local  
 
-![UDP Scan](assets/Screenshot%202026-05-30%20005128.png)
+![UDP Scan](assets/netscanner-udp.png)
 ```text
 [*] Target: scanme.nmap.org (45.33.32.156)
 [*] Port range: 1 - 1000
@@ -125,8 +137,8 @@ NetScanner is controlled entirely via the command line. The simple interface is 
 
 Scanning...
 
-[+] Port 22     SSH          194.4 ms
-[+] Port 80     HTTP         190.7 ms
+[+] 45.33.32.156    TCP 22     SSH          194.4 ms
+[+] 45.33.32.156    TCP 80     HTTP         190.7 ms
 
 PORT   SERVICE   TIME(ms)   BANNER
 ---------------------------------------------
@@ -163,7 +175,8 @@ Each matched signal adds to a confidence score. The final result shows the detec
 
 ## Notes
 
-- The current implementation is focused on TCP scanning only.
+- UDP scanning reports a port as open only when it answers; silent ports are not listed.
+- HTTP banners are requested only on ports 80 and 8080.
 - Use a reasonable timeout value to balance scan speed and accuracy.
 - Banner grabbing may not work on every service.
 

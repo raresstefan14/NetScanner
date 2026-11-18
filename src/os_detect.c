@@ -11,6 +11,7 @@
 #include <netinet/ip_icmp.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <errno.h>
 #include "os_detect.h"
 
 static int resolve_host(const char *host, char *ip_out, size_t ip_len)
@@ -31,7 +32,7 @@ static OsResult ttl_to_os(int ttl)
     OsResult r;
     r.method = "TTL";
     if (ttl <= 0)        { r.os_name = OS_UNKNOWN; r.confidence = 0;  }
-    else if (ttl <= 64)  { r.os_name = OS_LINUX;   r.confidence = 60; }
+    else if (ttl <= 64)  { r.os_name = OS_UNIX;    r.confidence = 60; }
     else if (ttl <= 128) { r.os_name = OS_WINDOWS; r.confidence = 80; }
     else                 { r.os_name = OS_CISCO;   r.confidence = 70; }
     return r;
@@ -54,7 +55,12 @@ OsResult detect_os_from_ttl(const char *host)
     if (!resolve_host(host, ip, sizeof ip)) return fail;
 
     int sock = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
-    if (sock < 0) return fail;
+    if (sock < 0) {
+        static int warned = 0;
+        if (errno == EPERM && !warned++)
+            printf("  [!] TTL-based OS detection needs root: run with sudo\n");
+        return fail;
+    }
 
     struct { struct icmphdr hdr; char data[32]; } pkt;
     memset(&pkt, 0, sizeof pkt);
@@ -73,18 +79,30 @@ OsResult detect_os_from_ttl(const char *host)
         close(sock); return fail;
     }
 
-    fd_set fds; FD_ZERO(&fds); FD_SET(sock, &fds);
+    // A raw socket sees every ICMP packet (even our own request), so keep reading
+    // until an echo reply from the target arrives or the 2 s budget runs out.
     struct timeval tv = { 2, 0 };
-    if (select(sock + 1, &fds, NULL, NULL, &tv) <= 0) { close(sock); return fail; }
-
     char buf[1024];
-    struct sockaddr_in src;
-    socklen_t src_len = sizeof src;
-    ssize_t n = recvfrom(sock, buf, sizeof buf, 0, (struct sockaddr *)&src, &src_len);
-    close(sock);
+    for (;;) {
+        fd_set fds; FD_ZERO(&fds); FD_SET(sock, &fds);
+        if (select(sock + 1, &fds, NULL, NULL, &tv) <= 0) break;  // Linux select() counts tv down
 
-    if (n < (ssize_t)(sizeof(struct iphdr) + sizeof(struct icmphdr))) return fail;
-    return ttl_to_os(((struct iphdr *)buf)->ttl);
+        struct sockaddr_in src;
+        socklen_t src_len = sizeof src;
+        ssize_t n = recvfrom(sock, buf, sizeof buf, 0, (struct sockaddr *)&src, &src_len);
+        if (n < (ssize_t)(sizeof(struct iphdr) + sizeof(struct icmphdr))) continue;
+
+        struct iphdr *iph = (struct iphdr *)buf;
+        if (n < (ssize_t)(iph->ihl * 4 + sizeof(struct icmphdr))) continue;
+        struct icmphdr *icmp = (struct icmphdr *)(buf + iph->ihl * 4);
+        if (src.sin_addr.s_addr == dst.sin_addr.s_addr && icmp->type == ICMP_ECHOREPLY
+            && icmp->un.echo.id == pkt.hdr.un.echo.id) {
+            close(sock);
+            return ttl_to_os(iph->ttl);
+        }
+    }
+    close(sock);
+    return fail;
 }
 
 typedef struct { const char *pattern; const char *os; int confidence; } BannerRule;

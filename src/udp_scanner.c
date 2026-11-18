@@ -3,18 +3,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/socket.h>
-#include <sys/time.h>
 #include <arpa/inet.h>
-#include <pthread.h>
 #include "../include/udp_scanner.h"
 #include "../include/scanner.h"
-
-typedef struct {
-    const char *ip;
-    int port;
-    int timeout_ms;
-    PortResult *result;
-} UDPArg;
 
 const char* get_udp_probe(int port, int *len) {
     static const char dns_probe[] = {
@@ -69,67 +60,4 @@ int scan_udp_port(const char *ip, int port, int timeout_ms) {
 
     close(sockfd);
     return n > 0 ? 1 : 0;
-}
-
-static void *udp_thread(void *arg) {
-    UDPArg *a = (UDPArg *)arg;
-
-    struct timeval t1, t2;
-    gettimeofday(&t1, NULL);
-    int open = scan_udp_port(a->ip, a->port, a->timeout_ms);
-    gettimeofday(&t2, NULL);
-
-    double elapsed = (t2.tv_sec - t1.tv_sec) * 1000.0 +
-                     (t2.tv_usec - t1.tv_usec) / 1000.0;
-
-    a->result->port = a->port;
-    a->result->open = open;
-    a->result->response_time_ms = elapsed;
-    a->result->banner[0] = '\0';
-    strncpy(a->result->service, get_service_name(a->port), 31);
-
-    if (open) {
-        printf("  [+] UDP Port %-6d %-12s %.1f ms\n",
-               a->port, a->result->service, elapsed);
-        fflush(stdout);
-    }
-
-    return NULL;
-}
-
-PortResult* scan_udp_range(const char *ip, ScanConfig *config, int *open_count) {
-    int total = config->port_end - config->port_start + 1;
-    PortResult *all_results = malloc(sizeof(PortResult) * total);
-    PortResult *open_results = malloc(sizeof(PortResult) * total);
-    memset(all_results, 0, sizeof(PortResult) * total);
-    *open_count = 0;
-
-    pthread_t threads[100];
-    UDPArg args[100];
-    int i = 0;
-
-    while (i < total) {
-        int batch = (total - i < 100) ? total - i : 100;
-
-        for (int j = 0; j < batch; j++) {
-            args[j].ip         = ip;
-            args[j].port       = config->port_start + i + j;
-            args[j].timeout_ms = config->timeout_ms;
-            args[j].result     = &all_results[i + j];
-            pthread_create(&threads[j], NULL, udp_thread, &args[j]);
-        }
-
-        for (int j = 0; j < batch; j++)
-            pthread_join(threads[j], NULL);
-
-        i += batch;
-    }
-
-    for (int j = 0; j < total; j++) {
-        if (all_results[j].open)
-            open_results[(*open_count)++] = all_results[j];
-    }
-
-    free(all_results);
-    return open_results;
 }
