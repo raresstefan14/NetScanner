@@ -54,7 +54,7 @@ void print_progress(int current, int total) {
 void print_result(PortResult *results, int count, const char *host) {
     printf("\n  ┌─────────────────────────────────────────┐\n");
     printf("  │  Host: %-32s │\n", host);
-    printf("  │  Open ports: %-27d │\n", count);
+    printf("  │  Open ports: %-26d │\n", count);
     printf("  └─────────────────────────────────────────┘\n\n");
 
     if (count == 0) {

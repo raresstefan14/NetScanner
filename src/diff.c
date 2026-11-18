@@ -60,7 +60,8 @@ static int in_scope(const StateEntry *e, char **ips, int ip_count, const ScanCon
 
 static void fmt_ago(time_t when, char *buf, size_t len) {
     long s = (long)difftime(time(NULL), when);
-    if (s < 3600)       snprintf(buf, len, "%ld min ago", s / 60);
+    if (s < 60)         snprintf(buf, len, "just now");  // also covers clock jumping back
+    else if (s < 3600)       snprintf(buf, len, "%ld min ago", s / 60);
     else if (s < 86400) snprintf(buf, len, "%ld h ago", s / 3600);
     else                snprintf(buf, len, "%ld days ago", s / 86400);
 }
