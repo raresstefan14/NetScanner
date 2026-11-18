@@ -17,6 +17,7 @@ Built with POSIX sockets and pthreads, the scanner has no external runtime depen
 - Detects common services such as SSH, HTTP, FTP, DNS, and more
 - Captures service banners on open ports
 - **OS Detection** — fingerprints the target OS using TTL analysis (needs `sudo`) and banner matching
+- **Explain mode (`-e`)** — tells you *why* each open port matters, how to fix it, and grades the host A–F
 - Saves results to a file with `-o`
 - Configurable port range, timeout, and scan mode
 ## Requirements
@@ -147,6 +148,29 @@ PORT   SERVICE   TIME(ms)   BANNER
 ```
 
 
+## Explain Mode
+
+Most scanners tell you *what* is open. With `-e`, NetScanner also tells you what it means:
+
+```bash
+./netscanner -h 192.168.1.1 -e
+```
+
+```text
+  Security report for 192.168.1.1
+  ──────────────────────────────────────────────────────
+  [CRITICAL] 6379   Redis          Usually has no password; anyone can read data and often run commands.
+                                   -> Bind to 127.0.0.1 and set requirepass.
+  [MEDIUM  ] 8080   HTTP-Alt       Often an admin panel or dev server left open by accident.
+                                   -> Check what runs here; close it or put it behind a login and HTTPS.
+
+  Grade: D (40/100)  1 critical, 0 high, 1 medium, 0 low
+```
+
+The host starts at 100 points and loses 50 per CRITICAL, 25 per HIGH, 10 per MEDIUM and 2 per LOW port
+(A ≥ 90, B ≥ 75, C ≥ 60, D ≥ 40, otherwise F). The rules live in `src/explain.c`, one line per port,
+so adding a new service is easy. Risk assumes the port is reachable by people you don't trust.
+
 ## How It Works
 
 NetScanner performs TCP connect scans in parallel using POSIX sockets and `select()` for timeouts. For each port in the requested range, the scanner:
@@ -169,7 +193,8 @@ After the scan completes, NetScanner attempts to identify the target operating s
 Each matched signal adds to a confidence score. The final result shows the detected OS name, family, and confidence percentage.
 ## Project Structure
 
-- `src/` : application source files
+- `src/` : application source files (`explain.c` holds the port risk table)
+- `tests/` : smoke tests (`make test`)
 - `include/` : public headers for scanner functionality
 - `Makefile` : build instructions
 

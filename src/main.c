@@ -6,18 +6,21 @@
 #include "../include/cidr.h"
 #include "../include/udp_scanner.h"
 #include "../include/os_detect.h"
+#include "../include/explain.h"
 
 void usage(const char *prog) {
-    printf("Usage: %s -h <host/CIDR> [-p <start-end>] [-t <timeout_ms>] [-o <file>] [-u]\n", prog);
+    printf("Usage: %s -h <host/CIDR> [-p <start-end>] [-t <timeout_ms>] [-o <file>] [-u] [-e]\n", prog);
     printf("  -h  host, IP or CIDR (ex: 192.168.1.0/24)\n");
     printf("  -p  port or port range (ex: 80 or 1-1000, default: 1-1024)\n");
     printf("  -t  timeout in ms (default: 1000)\n");
     printf("  -u  UDP scan mode\n");
+    printf("  -e  explain: risk of each open port, how to fix it, and an A-F grade\n");
     printf("  -v  verbose\n");
     printf("  -o  save results to file\n\n");
     printf("Examples:\n");
     printf("  ./netscanner -h scanme.nmap.org\n");
     printf("  ./netscanner -h scanme.nmap.org -u -p 1-200\n");
+    printf("  ./netscanner -h 192.168.1.1 -e\n");
     printf("  ./netscanner -h 192.168.1.0/24 -p 22-443 -t 500\n\n");
 }
 
@@ -69,6 +72,8 @@ int main(int argc, char *argv[]) {
             }
         } else if (strcmp(argv[i], "-v") == 0) {
             config.verbose = 1;
+        } else if (strcmp(argv[i], "-e") == 0 || strcmp(argv[i], "--explain") == 0) {
+            config.explain = 1;
         } else if (strcmp(argv[i], "-u") == 0) {
             udp_mode = 1;
         } else if (strcmp(argv[i], "-o") == 0 && i+1 < argc) {
@@ -137,7 +142,11 @@ int main(int argc, char *argv[]) {
             const char *label = is_cidr ? ip : config.host;
             print_result(results[h], counts[h], label);
             print_os_result(&os);
-            if (out) write_host(out, label, ip, udp_mode, &config, results[h], counts[h]);
+            if (config.explain) explain_host(stdout, label, results[h], counts[h], udp_mode);
+            if (out) {
+                write_host(out, label, ip, udp_mode, &config, results[h], counts[h]);
+                if (config.explain) explain_host(out, label, results[h], counts[h], udp_mode);
+            }
             free(results[h]);
         }
         free(results);

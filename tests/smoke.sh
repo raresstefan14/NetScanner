@@ -19,4 +19,12 @@ check "rejects port > 65535"   '! ./netscanner -h 127.0.0.1 -p 70000 2>/dev/null
 check "rejects zero timeout"   '! ./netscanner -h 127.0.0.1 -t 0 2>/dev/null'
 check "rejects huge CIDR"      '! ./netscanner -h 10.0.0.0/8 2>/dev/null'
 check "CIDR skips net/bcast"   './netscanner -h 127.0.0.0/30 -p $PORT -t 300 | grep -q "(2 hosts)"'
+exp=$(./netscanner -h 127.0.0.1 -p $PORT -t 300 -e)
+check "explain: unknown port is LOW" 'grep -q "\[LOW     \] $PORT" <<<"$exp"'
+check "explain: grade A (98/100)"    'grep -q "Grade: A (98/100)" <<<"$exp"'
+check "explain: nothing open = A"    './netscanner -h 127.0.0.1 -p 1 -t 300 -e | grep -q "Grade: A (100/100)"'
+TMP=$(mktemp)
+./netscanner -h 127.0.0.1 -p $PORT -t 300 -e -o "$TMP" >/dev/null
+check "explain goes into -o file"    'grep -q "Grade: A" "$TMP"'
+rm -f "$TMP"
 exit $fail

@@ -11,6 +11,7 @@ typedef struct {
     int port_end;
     int timeout_ms;
     int verbose;
+    int explain;
     char output_file[256];
 } ScanConfig;
 
