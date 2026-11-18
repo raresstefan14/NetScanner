@@ -7,20 +7,24 @@
 #include "../include/udp_scanner.h"
 #include "../include/os_detect.h"
 #include "../include/explain.h"
+#include "../include/diff.h"
 
 void usage(const char *prog) {
-    printf("Usage: %s -h <host/CIDR> [-p <start-end>] [-t <timeout_ms>] [-o <file>] [-u] [-e]\n", prog);
+    printf("Usage: %s -h <host/CIDR> [-p <start-end>] [-t <timeout_ms>] [-o <file>] [-u] [-e] [-d <state>]\n", prog);
     printf("  -h  host, IP or CIDR (ex: 192.168.1.0/24)\n");
     printf("  -p  port or port range (ex: 80 or 1-1000, default: 1-1024)\n");
     printf("  -t  timeout in ms (default: 1000)\n");
     printf("  -u  UDP scan mode\n");
     printf("  -e  explain: risk of each open port, how to fix it, and an A-F grade\n");
+    printf("  -d  diff: compare with the scan saved in <state>, show what changed, then update it\n");
+    printf("      (exit code 2 when something changed, handy for cron)\n");
     printf("  -v  verbose\n");
     printf("  -o  save results to file\n\n");
     printf("Examples:\n");
     printf("  ./netscanner -h scanme.nmap.org\n");
     printf("  ./netscanner -h scanme.nmap.org -u -p 1-200\n");
     printf("  ./netscanner -h 192.168.1.1 -e\n");
+    printf("  ./netscanner -h 192.168.1.0/24 -d home.state\n");
     printf("  ./netscanner -h 192.168.1.0/24 -p 22-443 -t 500\n\n");
 }
 
@@ -76,6 +80,8 @@ int main(int argc, char *argv[]) {
             config.explain = 1;
         } else if (strcmp(argv[i], "-u") == 0) {
             udp_mode = 1;
+        } else if ((strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--diff") == 0) && i+1 < argc) {
+            strncpy(config.state_file, argv[++i], sizeof(config.state_file) - 1);
         } else if (strcmp(argv[i], "-o") == 0 && i+1 < argc) {
             strncpy(config.output_file, argv[++i], sizeof(config.output_file) - 1);
         } else {
@@ -124,6 +130,8 @@ int main(int argc, char *argv[]) {
     int group = 100000 / ports;
     if (group < 1) group = 1;
     int *counts = malloc(sizeof(int) * group);
+    StateEntry *found = NULL;  // every open port of this run, for -d
+    int n_found = 0;
 
     for (int g = 0; g < ip_count; g += group) {
         int n = ip_count - g < group ? ip_count - g : group;
@@ -131,6 +139,17 @@ int main(int argc, char *argv[]) {
 
         for (int h = 0; h < n; h++) {
             const char *ip = ips[g + h];
+            if (config.state_file[0]) {
+                found = realloc(found, sizeof(StateEntry) * (n_found + counts[h]));
+                for (int j = 0; j < counts[h]; j++) {
+                    StateEntry *e = &found[n_found++];
+                    memset(e, 0, sizeof *e);
+                    strncpy(e->ip, ip, sizeof(e->ip) - 1);
+                    e->udp  = udp_mode;
+                    e->port = results[h][j].port;
+                    memcpy(e->banner, results[h][j].banner, sizeof e->banner);  // same size, already terminated
+                }
+            }
             // In a subnet scan, hosts with nothing open are just noise.
             if (is_cidr && counts[h] == 0) { free(results[h]); continue; }
 
@@ -157,8 +176,15 @@ int main(int argc, char *argv[]) {
         printf("  [*] Results saved to: %s\n\n", config.output_file);
     }
 
+    int changes = 0;
+    if (config.state_file[0]) {
+        changes = diff_and_save(config.state_file, found, n_found, ips, ip_count, &config, udp_mode);
+        free(found);
+    }
+
     for (int i = 0; i < ip_count; i++) free(ips[i]);
     free(ips);
     free(counts);
-    return 0;
+    if (changes < 0) return 1;
+    return changes > 0 ? 2 : 0;
 }

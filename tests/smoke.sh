@@ -27,4 +27,22 @@ TMP=$(mktemp)
 ./netscanner -h 127.0.0.1 -p $PORT -t 300 -e -o "$TMP" >/dev/null
 check "explain goes into -o file"    'grep -q "Grade: A" "$TMP"'
 rm -f "$TMP"
+ST=$(mktemp -u)
+dscan() { ./netscanner -h 127.0.0.1 -p 18000-18100 -t 300 -d "$ST"; }
+dscan >/dev/null; r=$?
+check "diff: first run is baseline (exit 0)" '[ $r -eq 0 ] && grep -q "127.0.0.1 tcp $PORT" "$ST"'
+dscan >/dev/null; r=$?
+check "diff: no change (exit 0)"             '[ $r -eq 0 ]'
+python3 -m http.server 18081 --bind 127.0.0.1 >/dev/null 2>&1 & SERVER2=$!; sleep 1
+d=$(dscan); r=$?
+check "diff: new port (exit 2)"              '[ $r -eq 2 ] && grep -q "NEW .* 18081" <<<"$d"'
+kill $SERVER2; sleep 0.5
+d=$(dscan); r=$?
+check "diff: closed port (exit 2)"           '[ $r -eq 2 ] && grep -q "CLOSED .* 18081" <<<"$d"'
+./netscanner -h 127.0.0.1 -p 1 -t 300 -d "$ST" >/dev/null
+check "diff: other ranges kept in state"     'grep -q "tcp $PORT" "$ST"'
+echo "not a state file" > "$ST"
+./netscanner -h 127.0.0.1 -p 1 -t 300 -d "$ST" >/dev/null 2>&1; r=$?
+check "diff: refuses to overwrite other files" '[ $r -eq 1 ] && grep -q "not a state file" "$ST"'
+rm -f "$ST"
 exit $fail

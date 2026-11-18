@@ -71,6 +71,8 @@ static const PortAdvice unknown_advice = {
 static const char *risk_name[] = { "LOW", "MEDIUM", "HIGH", "CRITICAL" };
 static const int   penalty[]   = { 2, 10, 25, 50 };
 
+const char *risk_label(Risk r) { return risk_name[r]; }
+
 const PortAdvice *find_advice(int port, int udp) {
     for (size_t i = 0; i < sizeof(advice) / sizeof(advice[0]); i++)
         if (advice[i].port == port && advice[i].udp == udp) return &advice[i];

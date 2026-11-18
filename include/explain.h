@@ -16,6 +16,7 @@ typedef struct {
 } PortAdvice;
 
 const PortAdvice *find_advice(int port, int udp);
+const char *risk_label(Risk r);
 int  security_score(const PortResult *results, int count, int udp);
 char score_to_grade(int score);
 void explain_host(FILE *f, const char *label, const PortResult *results, int count, int udp);

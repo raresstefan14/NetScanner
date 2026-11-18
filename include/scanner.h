@@ -13,6 +13,7 @@ typedef struct {
     int verbose;
     int explain;
     char output_file[256];
+    char state_file[256];
 } ScanConfig;
 
 typedef struct {

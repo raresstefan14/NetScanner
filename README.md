@@ -18,6 +18,7 @@ Built with POSIX sockets and pthreads, the scanner has no external runtime depen
 - Captures service banners on open ports
 - **OS Detection** — fingerprints the target OS using TTL analysis (needs `sudo`) and banner matching
 - **Explain mode (`-e`)** — tells you *why* each open port matters, how to fix it, and grades the host A–F
+- **Diff mode (`-d`)** — remembers the last scan and shows only what changed: new ports, closed ports, new software versions
 - Saves results to a file with `-o`
 - Configurable port range, timeout, and scan mode
 ## Requirements
@@ -170,6 +171,33 @@ Most scanners tell you *what* is open. With `-e`, NetScanner also tells you what
 The host starts at 100 points and loses 50 per CRITICAL, 25 per HIGH, 10 per MEDIUM and 2 per LOW port
 (A ≥ 90, B ≥ 75, C ≥ 60, D ≥ 40, otherwise F). The rules live in `src/explain.c`, one line per port,
 so adding a new service is easy. Risk assumes the port is reachable by people you don't trust.
+
+## Diff Mode
+
+Run the same scan with `-d <state-file>` and NetScanner remembers what it saw. Next time, it shows only what changed:
+
+```bash
+./netscanner -h 192.168.1.0/24 -p 1-1024 -d home.state
+```
+
+```text
+  Changes since last scan (2026-11-15 14:56, 3 days ago)
+  ──────────────────────────────────────────────────────
+  [NEW    ] 192.168.1.23    TCP 3389   RDP            HIGH risk
+  [CHANGED] 192.168.1.1     TCP 22     SSH            SSH-2.0-OpenSSH_8.2p1 -> SSH-2.0-OpenSSH_9.6p1
+  [CLOSED ] 192.168.1.40    TCP 21     FTP
+```
+
+- The first run just saves a baseline.
+- Only the hosts, ports and mode (TCP/UDP) you scanned are compared, so a quick `-p 22` scan won't mark everything else as closed.
+- The state file is plain text and will never overwrite a file that isn't a NetScanner state file.
+- Exit code is `0` for no changes, `2` when something changed, `1` on error.
+
+That makes NetScanner a simple network watchdog. For example, check your LAN every hour with cron and log changes:
+
+```cron
+0 * * * * cd ~/netscanner && ./netscanner -h 192.168.1.0/24 -d home.state > last.txt || cat last.txt >> changes.log
+```
 
 ## How It Works
 
